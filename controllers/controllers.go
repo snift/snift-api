@@ -11,7 +11,7 @@ import (
 // HomePage - the default root endpoint of Snift Backend
 func HomePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GET /")
-	fmt.Fprintf(w, "Welcome to the Snift!")
+	fmt.Fprintf(w, "Welcome to Snift!")
 }
 
 // GetScore - GET /scores handler
