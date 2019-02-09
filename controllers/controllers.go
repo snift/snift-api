@@ -1,24 +1,23 @@
 package controllers
 
 import (
-	"net/http"
+	"encoding/json"
 	"fmt"
 	"log"
-	"encoding/json"
-	service "snift-backend/service"
+	"net/http"
+	services "snift-backend/services"
 )
 
+// HomePage - the default root endpoint of Snift Backend
 func HomePage(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GET /")
 	fmt.Fprintf(w, "Welcome to the Snift!")
-	fmt.Println("Endpoint Hit: homePage")
 }
 
+// GetScore - GET /scores handler
 func GetScore(w http.ResponseWriter, r *http.Request) {
-
 	url := r.URL.Query().Get("url")
-	log.Print("Endpoint Hit: return Score")
-	//fmt.Fprintf(w, "The URL is "+url )
-	response := service.CalculateScore(url)
+	log.Print("GET /scores")
+	response := services.CalculateOverallScore(url)
 	json.NewEncoder(w).Encode(response)
-
 }
