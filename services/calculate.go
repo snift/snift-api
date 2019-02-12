@@ -23,7 +23,7 @@ func CalculateProtocolScore(protocol string) (score int, message string) {
 }
 
 // CalculateOverallScore returns the overall score for the incoming request
-func CalculateOverallScore(url string) *models.Scores {
+func CalculateOverallScore(url string) *models.ScoreResponse {
 	s := strings.Split(url, "://")
 	var messages []string
 	var score int
@@ -34,6 +34,6 @@ func CalculateOverallScore(url string) *models.Scores {
 	fmt.Println("Protocol Score is " + strconv.Itoa(protocolScore))
 	fmt.Println("Message: " + protocolMessage)
 	fmt.Println("Final Score for: " + url + " is " + strconv.Itoa(score))
-	response := models.GetScores(url, score, messages, models.GetCertificate(host))
+	response := models.GetScoresResponse(models.GetScores(url, score, messages), models.GetCertificate(host))
 	return response
 }
