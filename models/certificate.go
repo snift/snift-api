@@ -63,8 +63,8 @@ var serverCert = func(host, port string) ([]*x509.Certificate, string, error) {
 	return cert, ip, nil
 }
 
-// NewCert returns the Certificate associated with a host-port
-func NewCert(hostport string) *Cert {
+// GetCertificate returns the Certificate associated with a host-port
+func GetCertificate(hostport string) *Cert {
 	host, port, err := SplitHostPort(hostport)
 	if err != nil {
 		return &Cert{DomainName: host, Error: err.Error()}
