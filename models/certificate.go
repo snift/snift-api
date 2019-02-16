@@ -75,8 +75,7 @@ func GetCertificate(hostport string) *Cert {
 	}
 	cert := certChain[0]
 
-	var loc *time.Location
-	loc = time.UTC // Setting UTC as Standard Time
+	var loc = time.UTC // Setting UTC as Standard Time
 
 	return &Cert{
 		DomainName: host,
