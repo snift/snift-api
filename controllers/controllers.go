@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	services "snift-backend/services"
+	utils "snift-backend/utils"
 )
 
 // HomePage - the default root endpoint of Snift Backend
@@ -18,6 +19,8 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 func GetScore(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
 	log.Print("GET /scores")
-	response := services.CalculateOverallScore(url)
-	json.NewEncoder(w).Encode(response)
+	response, _ := json.Marshal(services.CalculateOverallScore(url))
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	utils.Writer(w.Write(response))
 }
