@@ -4,32 +4,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net"
-	"strings"
+	"snift-backend/utils"
 	"time"
 )
 
 // TimeoutSeconds references the total Time Out duration for the Handshake
 var TimeoutSeconds = 3
-
-const defaultPort = "443"
-
-// SplitHostPort returns a Host and Port seperately in a host-port URL
-func SplitHostPort(hostport string) (string, string, error) {
-	if !strings.Contains(hostport, ":") {
-		return hostport, defaultPort, nil
-	}
-
-	host, port, err := net.SplitHostPort(hostport)
-	if err != nil {
-		return "", "", err
-	}
-
-	if port == "" {
-		port = defaultPort
-	}
-
-	return host, port, nil
-}
 
 //Cert holds the certificate details
 type Cert struct {
@@ -65,7 +45,7 @@ var serverCert = func(host, port string) ([]*x509.Certificate, string, error) {
 
 // GetCertificate returns the Certificate associated with a host-port
 func GetCertificate(hostport string) *Cert {
-	host, port, err := SplitHostPort(hostport)
+	host, port, err := utils.SplitHostPort(hostport)
 	if err != nil {
 		return &Cert{DomainName: host, Error: err.Error()}
 	}
