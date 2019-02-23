@@ -15,7 +15,7 @@ snift-backend
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Local env configuration
+# Local Environment configuration
 .env
 
 # Temporary files
