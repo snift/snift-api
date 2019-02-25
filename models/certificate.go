@@ -3,33 +3,13 @@ package models
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net"
-	"strings"
 	"time"
 )
 
 // TimeoutSeconds references the total Time Out duration for the Handshake
 var TimeoutSeconds = 3
-
-const defaultPort = "443"
-
-// SplitHostPort returns a Host and Port seperately in a host-port URL
-func SplitHostPort(hostport string) (string, string, error) {
-	if !strings.Contains(hostport, ":") {
-		return hostport, defaultPort, nil
-	}
-
-	host, port, err := net.SplitHostPort(hostport)
-	if err != nil {
-		return "", "", err
-	}
-
-	if port == "" {
-		port = defaultPort
-	}
-
-	return host, port, nil
-}
 
 //Cert holds the certificate details
 type Cert struct {
@@ -40,14 +20,14 @@ type Cert struct {
 	SANs       []string `json:"sans"`
 	NotBefore  string   `json:"not_before"`
 	NotAfter   string   `json:"not_after"`
-	Error      string   `json:"error"`
 	certChain  []*x509.Certificate
 }
 
-var serverCert = func(host, port string) ([]*x509.Certificate, string, error) {
+var serverCert = func(host string, port string) ([]*x509.Certificate, string, error) {
 	d := &net.Dialer{
 		Timeout: time.Duration(TimeoutSeconds) * time.Second,
 	}
+	fmt.Println(host + " " + port)
 	conn, err := tls.DialWithDialer(d, "tcp", host+":"+port, &tls.Config{
 		InsecureSkipVerify: false,
 	})
@@ -64,14 +44,15 @@ var serverCert = func(host, port string) ([]*x509.Certificate, string, error) {
 }
 
 // GetCertificate returns the Certificate associated with a host-port
-func GetCertificate(hostport string) *Cert {
-	host, port, err := SplitHostPort(hostport)
-	if err != nil {
-		return &Cert{DomainName: host, Error: err.Error()}
+func GetCertificate(host string, port string, protocol string) (*Cert, error) {
+	// dont get certificates for non-https protocols, and when port number is 80
+	// trying to fetch certs with port:80 causes tls overload
+	if protocol != "https" || (protocol == "https" && port == "80") {
+		return nil, nil
 	}
 	certChain, ip, err := serverCert(host, port)
 	if err != nil {
-		return &Cert{DomainName: host, Error: err.Error()}
+		return &Cert{DomainName: host}, err
 	}
 	cert := certChain[0]
 
@@ -85,7 +66,6 @@ func GetCertificate(hostport string) *Cert {
 		SANs:       cert.DNSNames, // Subject Alternative Name
 		NotBefore:  cert.NotBefore.In(loc).String(),
 		NotAfter:   cert.NotAfter.In(loc).String(),
-		Error:      "",
 		certChain:  certChain,
-	}
+	}, nil
 }
