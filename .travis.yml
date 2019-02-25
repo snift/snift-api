@@ -16,4 +16,4 @@ before_script:
 
 script:
   - golangci-lint run
-  - go test
+  - go test  ./... -cover
