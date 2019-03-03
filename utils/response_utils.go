@@ -37,10 +37,7 @@ func InternalServerError(w http.ResponseWriter, isJSON bool, err string) {
 }
 
 // IsValidURL tests a string to determine if it is a url or not.
-func IsValidURL(rawURL string) bool {
+func IsValidURL(rawURL string) error {
 	_, err := url.ParseRequestURI(rawURL)
-	if err != nil {
-		return false
-	}
-	return true
+	return err
 }

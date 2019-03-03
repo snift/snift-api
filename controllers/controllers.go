@@ -20,7 +20,8 @@ func GetScore(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
 	log.Print("GET /scores")
 
-	if !utils.IsValidURL(url) {
+	err := utils.IsValidURL(url)
+	if err != nil {
 		utils.BadRequest(w, true, "Invalid URL")
 		return
 	}

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	models "snift-backend/models"
+	"snift-backend/utils"
 	"strconv"
 	"strings"
 )
@@ -31,7 +32,7 @@ const PKPHeader = "Public-Key-Pins"
 const RPHeader = "Referrer-Policy"
 
 // XSSValues is used to store the X-Xss-Protection Header values
-var XSSValues = [...]string{"0", "1;"}
+var XSSValues = [...]string{"0", "1"}
 
 // XFrameValues is used to store the X-Frame-Options Header values
 var XFrameValues = [...]string{"deny", "sameorigin", "allow-from"}
@@ -90,7 +91,10 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	messages = append(messages, protocolMessage)
 	score = score + protocolScore
 	var maximumScore = 5
-	headerScore, _, maxScore := GetResponseHeaderScore(scoresURL)
+	headerScore, _, maxScore, err := GetResponseHeaderScore(scoresURL)
+	if err != nil {
+		return nil, err
+	}
 	maximumScore = maximumScore + maxScore
 	score = score + headerScore
 	totalScore := math.Ceil((float64(float64(score)/float64(maximumScore)))*100) / 100
@@ -107,7 +111,11 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 }
 
 // GetResponseHeaderScore returns the Response Header Score for the HTTP Request
-func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, maxScore int) {
+func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, maxScore int, err error) {
+	err = utils.IsValidURL(url)
+	if err != nil {
+		return 0, "", 0, err
+	}
 	var responseHeaderMap map[string]string
 	response, err := http.Head(url)
 	log.Print(err)
