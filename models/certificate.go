@@ -3,7 +3,6 @@ package models
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"net"
 	"time"
 )
@@ -27,7 +26,6 @@ var serverCert = func(host string, port string) ([]*x509.Certificate, string, er
 	d := &net.Dialer{
 		Timeout: time.Duration(TimeoutSeconds) * time.Second,
 	}
-	fmt.Println(host + " " + port)
 	conn, err := tls.DialWithDialer(d, "tcp", host+":"+port, &tls.Config{
 		InsecureSkipVerify: false,
 	})
