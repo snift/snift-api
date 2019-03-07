@@ -12,7 +12,7 @@ import (
 
 func handleRequests() {
 	port := os.Getenv("PORT")
-	log.Print("Server starting at PORT", port)
+	log.Print("Server starting at PORT ", port)
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", controllers.HomePage).Methods("GET")
 	myRouter.HandleFunc("/scores", controllers.GetScore).Methods("GET")

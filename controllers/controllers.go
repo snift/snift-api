@@ -19,14 +19,16 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 func GetScore(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
 	log.Print("GET /scores")
-	response, err := services.CalculateOverallScore(url)
+
+	err := utils.IsValidURL(url)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.BadRequest(w, true, "Invalid URL")
 		return
 	}
+	response, _ := services.CalculateOverallScore(url)
 	body, jsonError := json.Marshal(response)
 	if jsonError != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.InternalServerError(w, true, "Unexpected Error Occured")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
