@@ -1,12 +1,14 @@
 package services
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"math"
 	"net"
 	"net/http"
 	"net/url"
+	"os/exec"
 	models "snift-backend/models"
 	"snift-backend/utils"
 	"strconv"
@@ -30,6 +32,12 @@ const PKPHeader = "Public-Key-Pins"
 
 // RPHeader has the RP Header Name
 const RPHeader = "Referrer-Policy"
+
+// TXTQuery is used to extract all the TXT Records of a Domain
+const TXTQuery = "dig @8.8.8.8 +ignore +short +bufsize=1024 domain.com txt"
+
+// DMARCQuery is used to extract all the DMARC Records of a Domain
+const DMARCQuery = "dig +short TXT _dmarc.domain.com"
 
 // XSSValues is used to store the X-Xss-Protection Header values
 var XSSValues = [...]string{"0", "1"}
@@ -97,6 +105,9 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	}
 	maximumScore = maximumScore + maxScore
 	score = score + headerScore
+	mailServerScore, maxScore := GetMailServerConfigurationScore(host)
+	score += mailServerScore
+	maximumScore += maxScore
 	totalScore := math.Ceil((float64(float64(score)/float64(maximumScore)))*100) / 100
 	fmt.Println("Protocol Score is " + strconv.Itoa(protocolScore))
 	fmt.Println("Message: " + protocolMessage)
@@ -211,6 +222,81 @@ func GetReferrerPolicyScore(ReferrerPolicy string) (score int) {
 		score = 4
 	} else if strings.Compare(ReferrerPolicy, ReferrerPolicyValues[7]) == 0 {
 		score = 2
+	}
+	return
+}
+
+// GetMailServerConfigurationScore returns the Mail Server Configuration Score of a Domain
+func GetMailServerConfigurationScore(host string) (totalScore int, maximumScore int) {
+	maximumScore = 0
+	totalScore = 0
+	if strings.HasPrefix(host, "www.") {
+		host = strings.Replace(host, "www.", "", -1)
+	}
+	spfScore, maxScore := GetSPFScore(host)
+	maximumScore = maximumScore + maxScore
+	totalScore = totalScore + spfScore
+	totalScore += GetDMARCScore(host)
+	maximumScore += 5
+	return
+}
+
+// GetSPFScore returns the Sender Policy Framework Score of the Domain
+func GetSPFScore(domain string) (totalScore int, maxScore int) {
+	command := strings.Replace(TXTQuery, "domain.com", domain, -1)
+	out, err := exec.Command("bash", "-c", command).Output()
+	txtRecords := string(out[:])
+
+	if err != nil {
+		fmt.Println("Unexpected Error Occured while extracting TXT Records", err)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(txtRecords))
+	scanner.Split(bufio.ScanLines)
+
+	spfRecordCount := 0
+	totalScore = 0
+
+	for scanner.Scan() {
+		txtRecord := scanner.Text()
+		// Removing Surrounding Quotes and trimming spaces
+		txtRecord = strings.TrimSpace(txtRecord[1 : len(txtRecord)-1])
+		if strings.HasSuffix(txtRecord, "-all") {
+			totalScore = totalScore + 5
+			spfRecordCount++
+
+		} else if strings.HasSuffix(txtRecord, "~all") {
+			totalScore = totalScore + 3
+			spfRecordCount++
+
+		} else if strings.HasSuffix(txtRecord, "?all") {
+			totalScore = totalScore + 2
+			spfRecordCount++
+
+		} else if strings.HasSuffix(txtRecord, "+all") {
+			spfRecordCount++
+		}
+	}
+	maxScore = spfRecordCount * 5
+	return
+}
+
+// GetDMARCScore returns the DMARC Score of the Domain
+func GetDMARCScore(domain string) (score int) {
+	command := strings.Replace(DMARCQuery, "domain.com", domain, -1)
+	out, err := exec.Command("bash", "-c", command).Output()
+	dmarcRecord := string(out[:])
+
+	score = 0
+
+	if err != nil {
+		fmt.Println("Unexpected Error Occured while extracting DMARC Records", err)
+	}
+	if len(dmarcRecord) > 2 {
+		dmarcRecord = strings.TrimSpace(dmarcRecord[1 : len(dmarcRecord)-1])
+		if strings.HasPrefix(dmarcRecord, "v=DMARC") {
+			score = 5
+		}
 	}
 	return
 }
