@@ -2,7 +2,9 @@ package services
 
 import (
 	"bufio"
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"net"
@@ -13,6 +15,7 @@ import (
 	"snift-backend/utils"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // XSSHeader has the XSS Header Name
@@ -38,6 +41,12 @@ const TXTQuery = "dig @8.8.8.8 +ignore +short +bufsize=1024 domain.com txt"
 
 // DMARCQuery is used to extract all the DMARC Records of a Domain
 const DMARCQuery = "dig +short TXT _dmarc.domain.com"
+
+// OpenBugBountyURL is used to query for previous security incidents
+const OpenBugBountyURL = "https://www.openbugbounty.org/api/1/search/?domain="
+
+// MaxIncidentResponseTime is the Maximum Incident Response Time taken as 30 days -> 30 * 24 = 720 hours
+const MaxIncidentResponseTime = 720
 
 // XSSValues is used to store the X-Xss-Protection Header values
 var XSSValues = [...]string{"0", "1"}
@@ -108,6 +117,9 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	mailServerScore, maxScore := GetMailServerConfigurationScore(host)
 	score += mailServerScore
 	maximumScore += maxScore
+	previousVulnerabilitiesScore, maxScore, IncidentList := GetPreviousVulnerabilitiesScore(host)
+	score += previousVulnerabilitiesScore
+	maximumScore += maxScore
 	totalScore := math.Ceil((float64(float64(score)/float64(maximumScore)))*100) / 100
 	fmt.Println("Protocol Score is " + strconv.Itoa(protocolScore))
 	fmt.Println("Message: " + protocolMessage)
@@ -117,7 +129,7 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 		return nil, certError
 	}
 	scores := models.GetScores(scoresURL, totalScore, messages)
-	response := models.GetScoresResponse(scores, certificates)
+	response := models.GetScoresResponse(scores, certificates, IncidentList)
 	return response, nil
 }
 
@@ -299,4 +311,41 @@ func GetDMARCScore(domain string) (score int) {
 		}
 	}
 	return
+}
+
+// GetPreviousVulnerabilitiesScore gets the score for Previous Vulnerabilities taken from openbugbounty.org
+func GetPreviousVulnerabilitiesScore(host string) (totalScore int, maxScore int, IncidentList []models.Incident) {
+	if strings.HasPrefix(host, "www.") {
+		host = strings.Replace(host, "www.", "", -1)
+	}
+	resp, err := http.Get(OpenBugBountyURL + host)
+	if err != nil {
+		log.Fatalln("Error Occured while sending Request ", err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln("Error Occured while reading HTTP Response ", err)
+	}
+
+	var incidents models.Incidents
+	err = xml.Unmarshal(body, &incidents)
+	if err != nil {
+		log.Fatalln("Error Occured while Unmarshalling XML Response", err)
+	}
+	maxScore = len(incidents.IncidentList) * 10
+	totalScore = 0
+	for _, incident := range incidents.IncidentList {
+		if incident.Fixed {
+			ReportedDate, _ := time.Parse(time.RFC1123Z, incident.ReportedDate)
+			FixedDate, _ := time.Parse(time.RFC1123Z, incident.FixedDate)
+			diff := FixedDate.Sub(ReportedDate)
+			if diff.Hours() > MaxIncidentResponseTime {
+				totalScore += 5
+			} else {
+				totalScore += 10
+			}
+		}
+	}
+	return totalScore, maxScore, incidents.IncidentList
 }
