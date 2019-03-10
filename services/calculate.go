@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -59,6 +60,9 @@ var HSTSValues = [...]string{"max-age", "includeSubDomains", "preload"}
 
 // ReferrerPolicyValues used to store the Referrer-Policy Header values
 var ReferrerPolicyValues = [...]string{"no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"}
+
+// HTTPVersion is used to store the HTTP Versions
+var HTTPVersion = [...]string{"HTTP/2.0", "HTTP/1.1"}
 
 // CalculateProtocolScore returns a score based on whether the protocol is http/https
 func CalculateProtocolScore(protocol string) (score int, message string) {
@@ -185,6 +189,12 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 	}
 	maxScore = maxScore + 5
 	totalScore = totalScore + score
+	maxScore = maxScore + 5
+	totalScore += GetHTTPVersionScore(response.Proto)
+	maxScore = maxScore + 5
+	if response.TLS != nil {
+		totalScore += GetTLSVersionScore(response.TLS.Version)
+	}
 	return
 }
 
@@ -234,6 +244,30 @@ func GetReferrerPolicyScore(ReferrerPolicy string) (score int) {
 		score = 4
 	} else if strings.Compare(ReferrerPolicy, ReferrerPolicyValues[7]) == 0 {
 		score = 2
+	}
+	return
+}
+
+// GetHTTPVersionScore returns the score for HTTP Version
+func GetHTTPVersionScore(Proto string) (score int) {
+	score = 0
+	if strings.EqualFold(Proto, HTTPVersion[0]) {
+		score = 5
+	} else if strings.EqualFold(Proto, HTTPVersion[1]) {
+		score = 2
+	}
+	return
+}
+
+// GetTLSVersionScore returns the score for TLS Version
+func GetTLSVersionScore(Version uint16) (score int) {
+	score = 0
+	if Version == tls.VersionTLS12 {
+		score = 5
+	} else if Version == tls.VersionTLS11 {
+		score = 3
+	} else if Version == tls.VersionTLS10 {
+		score = 1
 	}
 	return
 }
