@@ -1,16 +1,22 @@
 package services
 
 import (
+	"bufio"
+	"crypto/tls"
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"net"
 	"net/http"
 	"net/url"
+	"os/exec"
 	models "snift-backend/models"
 	"snift-backend/utils"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // XSSHeader has the XSS Header Name
@@ -31,6 +37,18 @@ const PKPHeader = "Public-Key-Pins"
 // RPHeader has the RP Header Name
 const RPHeader = "Referrer-Policy"
 
+// TXTQuery is used to extract all the TXT Records of a Domain
+const TXTQuery = "dig @8.8.8.8 +ignore +short +bufsize=1024 domain.com txt"
+
+// DMARCQuery is used to extract all the DMARC Records of a Domain
+const DMARCQuery = "dig +short TXT _dmarc.domain.com"
+
+// OpenBugBountyURL is used to query for previous security incidents
+const OpenBugBountyURL = "https://www.openbugbounty.org/api/1/search/?domain="
+
+// MaxIncidentResponseTime is the Maximum Incident Response Time taken as 30 days -> 30 * 24 = 720 hours
+const MaxIncidentResponseTime = 720
+
 // XSSValues is used to store the X-Xss-Protection Header values
 var XSSValues = [...]string{"0", "1"}
 
@@ -42,6 +60,9 @@ var HSTSValues = [...]string{"max-age", "includeSubDomains", "preload"}
 
 // ReferrerPolicyValues used to store the Referrer-Policy Header values
 var ReferrerPolicyValues = [...]string{"no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"}
+
+// HTTPVersion is used to store the HTTP Versions
+var HTTPVersion = [...]string{"HTTP/2.0", "HTTP/1.1"}
 
 // CalculateProtocolScore returns a score based on whether the protocol is http/https
 func CalculateProtocolScore(protocol string) (score int, message string) {
@@ -97,6 +118,12 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	}
 	maximumScore = maximumScore + maxScore
 	score = score + headerScore
+	mailServerScore, maxScore := GetMailServerConfigurationScore(host)
+	score += mailServerScore
+	maximumScore += maxScore
+	previousVulnerabilitiesScore, maxScore, IncidentList := GetPreviousVulnerabilitiesScore(host)
+	score += previousVulnerabilitiesScore
+	maximumScore += maxScore
 	totalScore := math.Ceil((float64(float64(score)/float64(maximumScore)))*100) / 100
 	fmt.Println("Protocol Score is " + strconv.Itoa(protocolScore))
 	fmt.Println("Message: " + protocolMessage)
@@ -106,7 +133,7 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 		return nil, certError
 	}
 	scores := models.GetScores(scoresURL, totalScore, messages)
-	response := models.GetScoresResponse(scores, certificates)
+	response := models.GetScoresResponse(scores, certificates, IncidentList)
 	return response, nil
 }
 
@@ -162,6 +189,12 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 	}
 	maxScore = maxScore + 5
 	totalScore = totalScore + score
+	maxScore = maxScore + 5
+	totalScore += GetHTTPVersionScore(response.Proto)
+	maxScore = maxScore + 5
+	if response.TLS != nil {
+		totalScore += GetTLSVersionScore(response.TLS.Version)
+	}
 	return
 }
 
@@ -213,4 +246,140 @@ func GetReferrerPolicyScore(ReferrerPolicy string) (score int) {
 		score = 2
 	}
 	return
+}
+
+// GetHTTPVersionScore returns the score for HTTP Version
+func GetHTTPVersionScore(Proto string) (score int) {
+	score = 0
+	if strings.EqualFold(Proto, HTTPVersion[0]) {
+		score = 5
+	} else if strings.EqualFold(Proto, HTTPVersion[1]) {
+		score = 2
+	}
+	return
+}
+
+// GetTLSVersionScore returns the score for TLS Version
+func GetTLSVersionScore(Version uint16) (score int) {
+	score = 0
+	if Version == tls.VersionTLS12 {
+		score = 5
+	} else if Version == tls.VersionTLS11 {
+		score = 3
+	} else if Version == tls.VersionTLS10 {
+		score = 1
+	}
+	return
+}
+
+// GetMailServerConfigurationScore returns the Mail Server Configuration Score of a Domain
+func GetMailServerConfigurationScore(host string) (totalScore int, maximumScore int) {
+	maximumScore = 0
+	totalScore = 0
+	if strings.HasPrefix(host, "www.") {
+		host = strings.Replace(host, "www.", "", -1)
+	}
+	spfScore, maxScore := GetSPFScore(host)
+	maximumScore = maximumScore + maxScore
+	totalScore = totalScore + spfScore
+	totalScore += GetDMARCScore(host)
+	maximumScore += 5
+	return
+}
+
+// GetSPFScore returns the Sender Policy Framework Score of the Domain
+func GetSPFScore(domain string) (totalScore int, maxScore int) {
+	command := strings.Replace(TXTQuery, "domain.com", domain, -1)
+	out, err := exec.Command("bash", "-c", command).Output()
+	txtRecords := string(out[:])
+
+	if err != nil {
+		fmt.Println("Unexpected Error Occured while extracting TXT Records", err)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(txtRecords))
+	scanner.Split(bufio.ScanLines)
+
+	spfRecordCount := 0
+	totalScore = 0
+
+	for scanner.Scan() {
+		txtRecord := scanner.Text()
+		// Removing Surrounding Quotes and trimming spaces
+		txtRecord = strings.TrimSpace(txtRecord[1 : len(txtRecord)-1])
+		if strings.HasSuffix(txtRecord, "-all") {
+			totalScore = totalScore + 5
+			spfRecordCount++
+
+		} else if strings.HasSuffix(txtRecord, "~all") {
+			totalScore = totalScore + 3
+			spfRecordCount++
+
+		} else if strings.HasSuffix(txtRecord, "?all") {
+			totalScore = totalScore + 2
+			spfRecordCount++
+
+		} else if strings.HasSuffix(txtRecord, "+all") {
+			spfRecordCount++
+		}
+	}
+	maxScore = spfRecordCount * 5
+	return
+}
+
+// GetDMARCScore returns the DMARC Score of the Domain
+func GetDMARCScore(domain string) (score int) {
+	command := strings.Replace(DMARCQuery, "domain.com", domain, -1)
+	out, err := exec.Command("bash", "-c", command).Output()
+	dmarcRecord := string(out[:])
+
+	score = 0
+
+	if err != nil {
+		fmt.Println("Unexpected Error Occured while extracting DMARC Records", err)
+	}
+	if len(dmarcRecord) > 2 {
+		dmarcRecord = strings.TrimSpace(dmarcRecord[1 : len(dmarcRecord)-1])
+		if strings.HasPrefix(dmarcRecord, "v=DMARC") {
+			score = 5
+		}
+	}
+	return
+}
+
+// GetPreviousVulnerabilitiesScore gets the score for Previous Vulnerabilities taken from openbugbounty.org
+func GetPreviousVulnerabilitiesScore(host string) (totalScore int, maxScore int, IncidentList []models.Incident) {
+	if strings.HasPrefix(host, "www.") {
+		host = strings.Replace(host, "www.", "", -1)
+	}
+	resp, err := http.Get(OpenBugBountyURL + host)
+	if err != nil {
+		log.Fatalln("Error Occured while sending Request ", err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln("Error Occured while reading HTTP Response ", err)
+	}
+
+	var incidents models.Incidents
+	err = xml.Unmarshal(body, &incidents)
+	if err != nil {
+		log.Fatalln("Error Occured while Unmarshalling XML Response", err)
+	}
+	maxScore = len(incidents.IncidentList) * 10
+	totalScore = 0
+	for _, incident := range incidents.IncidentList {
+		if incident.Fixed {
+			ReportedDate, _ := time.Parse(time.RFC1123Z, incident.ReportedDate)
+			FixedDate, _ := time.Parse(time.RFC1123Z, incident.FixedDate)
+			diff := FixedDate.Sub(ReportedDate)
+			if diff.Hours() > MaxIncidentResponseTime {
+				totalScore += 5
+			} else {
+				totalScore += 10
+			}
+		}
+	}
+	return totalScore, maxScore, incidents.IncidentList
 }

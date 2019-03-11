@@ -68,3 +68,17 @@ func TestGetReferrerPolicyScore(t *testing.T) {
 	assert.Equal(t, GetReferrerPolicyScore("strict-origin-when-cross-origin"), 4)
 	assert.Equal(t, GetReferrerPolicyScore("unsafe-url"), 2)
 }
+
+func TestGetDMARCScore(t *testing.T) {
+	assert.Equal(t, GetDMARCScore("google.com"), 5)
+	assert.Equal(t, GetDMARCScore("www.google.com"), 0)
+}
+
+func TestGetMailServerConfigurationScore(t *testing.T) {
+	score, maxScore := GetMailServerConfigurationScore("google.com")
+	assert.Equal(t, score, 8)
+	assert.Equal(t, maxScore, 10)
+	score, maxScore = GetMailServerConfigurationScore("www.google.com")
+	assert.Equal(t, score, 8)
+	assert.Equal(t, maxScore, 10)
+}
