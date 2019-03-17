@@ -1,0 +1,182 @@
+[
+   {
+	  "starts_with":"nginx",
+      "details":{
+         "name":"Nginx",
+         "developed_by":"Nginx, Inc.",
+         "license":"2-clause BSD",
+         "website":"https://nginx.org/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"gunicorn",
+      "details":{
+         "name":"Gunicorn",
+         "developed_by":"Gunicorn Developers",
+         "license":"MIT",
+         "website":"https://gunicorn.org/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"Microsoft-IIS",
+      "details":{
+         "name":"Internet Information Services (IIS)",
+         "developed_by":"Microsoft Corporation",
+         "license":"Proprietary",
+         "website":"https://www.iis.net/",
+         "is_open_source":false
+      }
+   },
+   {
+      "starts_with":"Apache-Coyote",
+      "details":{
+         "name":"Apache Tomcat - Coyote",
+         "developed_by":"Apache Software Foundation",
+         "license":"Apache License 2.0",
+         "website":"https://tomcat.apache.org/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"Apache",
+      "details":{
+         "name":"Apache HTTP Server",
+         "developed_by":"Apache Software Foundation",
+         "license":"Apache License 2.0",
+         "website":"https://httpd.apache.org/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"ATS",
+      "details":{
+         "name":"Apache Traffic Server",
+         "developed_by":"Apache Software Foundation",
+         "license":"Apache License 2.0",
+         "website":"https://trafficserver.apache.org/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"CERN",
+      "details":{
+         "name":"CERN httpd",
+         "developed_by":"World Wide Web Consortium (W3C)",
+         "license":"MIT Copyright Statement",
+         "website":"https://www.w3.org/Daemon/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"Jetty",
+      "details":{
+         "name":"Eclipse Jetty",
+         "developed_by":"Eclipse Foundation",
+         "license":"Apache License 2.0,Eclipse Public License 1.0",
+         "website":"https://www.eclipse.org/jetty/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"Glassfish",
+      "details":{
+         "name":"GlassFish",
+         "developed_by":"Oracle Corporation",
+         "license":"Common Development and Distribution License,GNU General Public License",
+         "website":"https://javaee.github.io/glassfish/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"cloudflare",
+      "details":{
+         "name":"Cloudflare",
+         "developed_by":"Cloudflare, Inc.",
+         "license":"Proprietary",
+         "website":"https://www.cloudflare.com/",
+         "is_open_source":false
+      }
+   },
+   {
+      "starts_with":"BigIP",
+      "details":{
+         "name":"BIG-IP",
+         "developed_by":"F5 Networks, Inc.",
+         "license":"Proprietary",
+         "website":"https://f5.com/products/big-ip-services",
+         "is_open_source":false
+      }
+   },
+   {
+      "starts_with":"AkamaiGHost",
+      "details":{
+         "name":"Akamai Global Host (Edge Server)",
+         "developed_by":"Akamai Technologies, Inc.",
+         "license":"Proprietary",
+         "website":"https://www.akamai.com/",
+         "is_open_source":false
+      }
+   },
+   {
+      "starts_with":"Play",
+      "details":{
+         "name":"Play Framework",
+         "developed_by":"Lightbend,Zengularity",
+         "license":"Apache License 2.0",
+         "website":"https://www.playframework.com/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"gws",
+      "details":{
+         "name":"Google Web Server",
+         "developed_by":"Google LLC",
+         "license":"Proprietary",
+         "website":"https://www.google.com/",
+         "is_open_source":false
+      }
+   },
+   {
+      "starts_with":"openresty",
+      "details":{
+         "name":" OpenResty",
+         "developed_by":"OpenResty Inc.",
+         "license":"2-clause BSD",
+         "website":"https://openresty.org",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"Google Frontend",
+      "details":{
+         "name":"Google Front End (GFE)",
+         "developed_by":"Google LLC",
+         "license":"Proprietary",
+         "website":"https://www.google.com/",
+         "is_open_source":false
+      }
+   },
+   {
+      "starts_with":"Tengine",
+      "details":{
+         "name":"Tengine",
+         "developed_by":"Alibaba Group Holding Limited",
+         "license":"2-clause BSD",
+         "website":"https://tengine.taobao.org/",
+         "is_open_source":true
+      }
+   },
+   {
+      "starts_with":"squid",
+      "details":{
+         "name":"Squid",
+         "developed_by":"Duane Wessels, Henrik Nordström, Amos Jeffries, Alex Rousskov, Francesco Chemolli, Robert Collins, Guido Serassio and volunteers",
+         "license":"GNU GPLv2",
+         "website":"http://www.squid-cache.org/",
+         "is_open_source":true
+      }
+   }
+]
