@@ -1,6 +1,6 @@
 [
    {
-	  "starts_with":"nginx",
+      "starts_with":"nginx",
       "details":{
          "name":"Nginx",
          "developed_by":"Nginx, Inc.",
