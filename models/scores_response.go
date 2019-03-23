@@ -3,9 +3,9 @@ package models
 // ScoreResponse holds a Score JSON, the Certificate Details JSON for the main Scores API
 type ScoreResponse struct {
 	Scores       *Scores       `json:"scores"`
-	Cert         *Cert         `json:"certificate_details"`
-	IncidentList []Incident    `json:"security_incidents"`
-	ServerDetail *ServerDetail `json:"web_server"`
+	Cert         *Cert         `json:"certificate_details,omitempty"`
+	IncidentList []Incident    `json:"security_incidents,omitempty"`
+	ServerDetail *ServerDetail `json:"web_server,omitempty"`
 }
 
 // GetScoresResponse returns a main Scores Response

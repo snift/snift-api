@@ -171,7 +171,9 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 	}
 	var responseHeaderMap map[string]string
 	response, err := http.Head(url)
-	log.Print(err)
+	if err != nil {
+		return 0, "", 0, nil, err
+	}
 	responseHeaderMap = make(map[string]string)
 	for k, v := range response.Header {
 		value := strings.Join(v, ",")
@@ -429,9 +431,9 @@ func GetPreviousVulnerabilitiesScore(host string) (totalScore int, maxScore int,
 }
 
 func getServerInformation(server string) (serverInfo *models.ServerDetail) {
-	jsonFile, err := os.Open("resources/web_servers.json")
+	jsonFile, err := os.Open("/home/maruthi/projects/snift/src/snift-backend/resources/web_servers.json")
 	if err != nil {
-		log.Fatal("Error Occured while opening JSON File")
+		log.Fatal("Error Occured while opening JSON File ", err)
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
@@ -439,7 +441,7 @@ func getServerInformation(server string) (serverInfo *models.ServerDetail) {
 	jsonValue, err := ioutil.ReadAll(jsonFile)
 
 	if err != nil {
-		log.Fatal("Error Occured while reading JSON File")
+		log.Fatal("Error Occured while reading JSON File ", err)
 	}
 
 	values := make([]models.WebServer, 0)
