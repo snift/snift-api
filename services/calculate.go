@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	models "snift-backend/models"
 	"snift-backend/utils"
@@ -37,6 +39,12 @@ const PKPHeader = "Public-Key-Pins"
 // RPHeader has the RP Header Name
 const RPHeader = "Referrer-Policy"
 
+// XContentTypeHeader has the X-Content-Type Header Name
+const XContentTypeHeader = "X-Content-Type-Options"
+
+// Server has the Server Header
+const Server = "Server"
+
 // TXTQuery is used to extract all the TXT Records of a Domain
 const TXTQuery = "dig @8.8.8.8 +ignore +short +bufsize=1024 domain.com txt"
 
@@ -49,6 +57,21 @@ const OpenBugBountyURL = "https://www.openbugbounty.org/api/1/search/?domain="
 // MaxIncidentResponseTime is the Maximum Incident Response Time taken as 30 days -> 30 * 24 = 720 hours
 const MaxIncidentResponseTime = 720
 
+const (
+	// HTTPSecure Badge
+	HTTPSecure = "HTTP_SECURE"
+	// XSSProtect Badge
+	XSSProtect = "XSS_PROTECT"
+	// HTTPS2 Badge
+	HTTPS2 = "HTTP_2.0"
+	// TLSSecure Badge
+	TLSSecure = "LATEST_TLS"
+	// XFRAMEDeny Badge
+	XFRAMEDeny = "CLICKJACKING_PROTECT"
+	// SeriousSecurity Badge
+	SeriousSecurity = "SERIOUS_SECURITY"
+)
+
 // XSSValues is used to store the X-Xss-Protection Header values
 var XSSValues = [...]string{"0", "1"}
 
@@ -60,6 +83,9 @@ var HSTSValues = [...]string{"max-age", "includeSubDomains", "preload"}
 
 // ReferrerPolicyValues used to store the Referrer-Policy Header values
 var ReferrerPolicyValues = [...]string{"no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"}
+
+// XContentTypeHeaderValue is used to store the value for X-Content-Type Options Header
+const XContentTypeHeaderValue = "nosniff"
 
 // HTTPVersion is used to store the HTTP Versions
 var HTTPVersion = [...]string{"HTTP/2.0", "HTTP/1.1"}
@@ -112,7 +138,7 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	messages = append(messages, protocolMessage)
 	score = score + protocolScore
 	var maximumScore = 5
-	headerScore, _, maxScore, err := GetResponseHeaderScore(scoresURL)
+	headerScore, _, maxScore, ServerDetail, err := GetResponseHeaderScore(scoresURL)
 	if err != nil {
 		return nil, err
 	}
@@ -133,19 +159,21 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 		return nil, certError
 	}
 	scores := models.GetScores(scoresURL, totalScore, messages)
-	response := models.GetScoresResponse(scores, certificates, IncidentList)
+	response := models.GetScoresResponse(scores, certificates, IncidentList, ServerDetail)
 	return response, nil
 }
 
 // GetResponseHeaderScore returns the Response Header Score for the HTTP Request
-func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, maxScore int, err error) {
+func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, maxScore int, serverInfo *models.ServerDetail, err error) {
 	err = utils.IsValidURL(url)
 	if err != nil {
-		return 0, "", 0, err
+		return 0, "", 0, nil, err
 	}
 	var responseHeaderMap map[string]string
 	response, err := http.Head(url)
-	log.Print(err)
+	if err != nil {
+		return 0, "", 0, nil, err
+	}
 	responseHeaderMap = make(map[string]string)
 	for k, v := range response.Header {
 		value := strings.Join(v, ",")
@@ -190,6 +218,15 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 	maxScore = maxScore + 5
 	totalScore = totalScore + score
 	maxScore = maxScore + 5
+	score = 0
+	if val, ok := responseHeaderMap[XContentTypeHeader]; ok {
+		score = GetXContentTypeScore(val)
+	}
+	totalScore += score
+	maxScore = maxScore + 5
+	if val, ok := responseHeaderMap[Server]; ok {
+		serverInfo = getServerInformation(val)
+	}
 	totalScore += GetHTTPVersionScore(response.Proto)
 	maxScore = maxScore + 5
 	if response.TLS != nil {
@@ -244,6 +281,15 @@ func GetReferrerPolicyScore(ReferrerPolicy string) (score int) {
 		score = 4
 	} else if strings.Compare(ReferrerPolicy, ReferrerPolicyValues[7]) == 0 {
 		score = 2
+	}
+	return
+}
+
+// GetXContentTypeScore returns the score for X-Content-Type-Options Header
+func GetXContentTypeScore(XContentType string) (score int) {
+	score = 0
+	if strings.EqualFold(XContentType, XContentTypeHeaderValue) {
+		score = 5
 	}
 	return
 }
@@ -336,7 +382,7 @@ func GetDMARCScore(domain string) (score int) {
 	score = 0
 
 	if err != nil {
-		fmt.Println("Unexpected Error Occured while extracting DMARC Records", err)
+		log.Fatal("Unexpected Error Occured while extracting DMARC Records", err)
 	}
 	if len(dmarcRecord) > 2 {
 		dmarcRecord = strings.TrimSpace(dmarcRecord[1 : len(dmarcRecord)-1])
@@ -382,4 +428,33 @@ func GetPreviousVulnerabilitiesScore(host string) (totalScore int, maxScore int,
 		}
 	}
 	return totalScore, maxScore, incidents.IncidentList
+}
+
+func getServerInformation(server string) (serverInfo *models.ServerDetail) {
+	jsonFile, err := os.Open("resources/web_servers.json")
+	if err != nil {
+		log.Fatal("Error Occured while opening JSON File ", err)
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	jsonValue, err := ioutil.ReadAll(jsonFile)
+
+	if err != nil {
+		log.Fatal("Error Occured while reading JSON File ", err)
+	}
+
+	values := make([]models.WebServer, 0)
+	err = json.Unmarshal(jsonValue, &values)
+	if err != nil {
+		log.Fatal("Error Occured while parsing JSON ", err)
+	}
+
+	for _, serverValue := range values {
+		if strings.HasPrefix(server, serverValue.Prefix) {
+			serverInfo = serverValue.ServerDetail
+			break
+		}
+	}
+	return
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	services "snift-backend/services"
 	utils "snift-backend/utils"
+	"time"
 )
 
 // HomePage - the default root endpoint of Snift Backend
@@ -17,6 +18,7 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 
 // GetScore - GET /scores handler
 func GetScore(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	url := r.URL.Query().Get("url")
 	log.Print("GET /scores")
 
@@ -33,5 +35,6 @@ func GetScore(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
+	fmt.Printf("Score for %s obtained in %v seconds \n", url, time.Since(start).Seconds())
 	utils.Writer(w.Write(body))
 }
