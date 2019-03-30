@@ -431,7 +431,7 @@ func GetPreviousVulnerabilitiesScore(host string) (totalScore int, maxScore int,
 }
 
 func getServerInformation(server string) (serverInfo *models.ServerDetail) {
-	jsonFile, err := os.Open("/home/maruthi/projects/snift/src/snift-backend/resources/web_servers.json")
+	jsonFile, err := os.Open("resources/web_servers.json")
 	if err != nil {
 		log.Fatal("Error Occured while opening JSON File ", err)
 	}
