@@ -147,9 +147,6 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	mailServerScore, maxScore := GetMailServerConfigurationScore(host)
 	score += mailServerScore
 	maximumScore += maxScore
-	previousVulnerabilitiesScore, maxScore, IncidentList := GetPreviousVulnerabilitiesScore(host)
-	score += previousVulnerabilitiesScore
-	maximumScore += maxScore
 	totalScore := math.Ceil((float64(float64(score)/float64(maximumScore)))*100) / 100
 	fmt.Println("Protocol Score is " + strconv.Itoa(protocolScore))
 	fmt.Println("Message: " + protocolMessage)
@@ -159,7 +156,7 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 		return nil, certError
 	}
 	scores := models.GetScores(scoresURL, totalScore, messages)
-	response := models.GetScoresResponse(scores, certificates, IncidentList, ServerDetail)
+	response := models.GetScoresResponse(scores, certificates, nil, ServerDetail)
 	return response, nil
 }
 
