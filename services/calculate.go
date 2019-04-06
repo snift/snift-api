@@ -21,82 +21,13 @@ import (
 	"time"
 )
 
-// XSSHeader has the XSS Header Name
-const XSSHeader = "X-Xss-Protection"
-
-// XFrameHeader has the XFrame Header Name
-const XFrameHeader = "X-Frame-Options"
-
-// HSTSHeader has the HSTS Header Name
-const HSTSHeader = "Strict-Transport-Security"
-
-// CSPHeader has the CSP Header Name
-const CSPHeader = "Content-Security-Policy"
-
-// PKPHeader has the PKP Header Name
-const PKPHeader = "Public-Key-Pins"
-
-// RPHeader has the RP Header Name
-const RPHeader = "Referrer-Policy"
-
-// XContentTypeHeader has the X-Content-Type Header Name
-const XContentTypeHeader = "X-Content-Type-Options"
-
-// Server has the Server Header
-const Server = "Server"
-
-// TXTQuery is used to extract all the TXT Records of a Domain
-const TXTQuery = "dig @8.8.8.8 +ignore +short +bufsize=1024 domain.com txt"
-
-// DMARCQuery is used to extract all the DMARC Records of a Domain
-const DMARCQuery = "dig +short TXT _dmarc.domain.com"
-
-// OpenBugBountyURL is used to query for previous security incidents
-const OpenBugBountyURL = "https://www.openbugbounty.org/api/1/search/?domain="
-
-// MaxIncidentResponseTime is the Maximum Incident Response Time taken as 30 days -> 30 * 24 = 720 hours
-const MaxIncidentResponseTime = 720
-
-const (
-	// HTTPSecure Badge
-	HTTPSecure = "HTTP_SECURE"
-	// XSSProtect Badge
-	XSSProtect = "XSS_PROTECT"
-	// HTTPS2 Badge
-	HTTPS2 = "HTTP_2.0"
-	// TLSSecure Badge
-	TLSSecure = "LATEST_TLS"
-	// XFRAMEDeny Badge
-	XFRAMEDeny = "CLICKJACKING_PROTECT"
-	// SeriousSecurity Badge
-	SeriousSecurity = "SERIOUS_SECURITY"
-)
-
-// XSSValues is used to store the X-Xss-Protection Header values
-var XSSValues = [...]string{"0", "1"}
-
-// XFrameValues is used to store the X-Frame-Options Header values
-var XFrameValues = [...]string{"deny", "sameorigin", "allow-from"}
-
-// HSTSValues used to store the X-Frame-Options Header values
-var HSTSValues = [...]string{"max-age", "includeSubDomains", "preload"}
-
-// ReferrerPolicyValues used to store the Referrer-Policy Header values
-var ReferrerPolicyValues = [...]string{"no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"}
-
-// XContentTypeHeaderValue is used to store the value for X-Content-Type Options Header
-const XContentTypeHeaderValue = "nosniff"
-
-// HTTPVersion is used to store the HTTP Versions
-var HTTPVersion = [...]string{"HTTP/2.0", "HTTP/1.1"}
-
 // CalculateProtocolScore returns a score based on whether the protocol is http/https
 func CalculateProtocolScore(protocol string) (score int, message string) {
 	score = -1
-	if strings.Compare(protocol, "http") == 0 {
+	if protocol == "http" {
 		score = 0
 		message = "Website is unencrypted and hence subjective to Man-in-the-Middle attacks(MITM) and Eavesdropping Attacks."
-	} else if strings.Compare(protocol, "https") == 0 {
+	} else if protocol == "https" {
 		score = 5
 		message = "From the protocol level, Website is secure."
 	} else {
@@ -167,152 +98,155 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 		return 0, "", 0, nil, err
 	}
 	var responseHeaderMap map[string]string
+	// Sending Head Request to URL
 	response, err := http.Head(url)
 	if err != nil {
 		return 0, "", 0, nil, err
 	}
 	responseHeaderMap = make(map[string]string)
+	// Constructing Response Header Map
 	for k, v := range response.Header {
 		value := strings.Join(v, ",")
 		responseHeaderMap[k] = value
 	}
-	totalScore = 0
-	var score = 0
-	maxScore = 0
-	if val, ok := responseHeaderMap[XSSHeader]; ok {
-		score, XSSReportURL = GetXSSScore(val)
-	}
-	maxScore = maxScore + 5
-	totalScore = totalScore + score
-	score = 1
-	if val, ok := responseHeaderMap[XFrameHeader]; ok {
-		score = GetXFrameScore(val)
-	}
-	maxScore = maxScore + 5
-	totalScore = totalScore + score
-	score = 2
-	if val, ok := responseHeaderMap[HSTSHeader]; ok {
-		score = GetHSTSScore(val)
-	}
-	maxScore = maxScore + 5
-	totalScore = totalScore + score
-	score = 3
-	if _, ok := responseHeaderMap[CSPHeader]; ok {
-		score = 5
-	}
-	maxScore = maxScore + 5
-	totalScore = totalScore + score
-	score = 3
-	if _, ok := responseHeaderMap[PKPHeader]; ok {
-		score = 5
-	}
-	maxScore = maxScore + 5
-	totalScore = totalScore + score
-	score = 2
-	if val, ok := responseHeaderMap[RPHeader]; ok {
-		score = GetReferrerPolicyScore(val)
-	}
-	maxScore = maxScore + 5
-	totalScore = totalScore + score
-	maxScore = maxScore + 5
-	score = 0
-	if val, ok := responseHeaderMap[XContentTypeHeader]; ok {
-		score = GetXContentTypeScore(val)
-	}
-	totalScore += score
-	maxScore = maxScore + 5
-	if val, ok := responseHeaderMap[Server]; ok {
-		serverInfo = getServerInformation(val)
-	}
-	totalScore += GetHTTPVersionScore(response.Proto)
-	maxScore = maxScore + 5
-	if response.TLS != nil {
-		totalScore += GetTLSVersionScore(response.TLS.Version)
-	}
+	// Calculating Scores for Individual Headers
+	totalScore, maxScore, XSSReportURL = GetXSSScore(responseHeaderMap[XSSHeader], totalScore, maxScore)
+	totalScore, maxScore = GetXFrameScore(responseHeaderMap[XFrameHeader], totalScore, maxScore)
+	totalScore, maxScore = GetHSTSScore(responseHeaderMap[HSTSHeader], totalScore, maxScore)
+	totalScore, maxScore = GetCSPScore(responseHeaderMap[CSPHeader], totalScore, maxScore)
+	totalScore, maxScore = GetPKPScore(responseHeaderMap[PKPHeader], totalScore, maxScore)
+	totalScore, maxScore = GetReferrerPolicyScore(responseHeaderMap[RPHeader], totalScore, maxScore)
+	totalScore, maxScore = GetXContentTypeScore(responseHeaderMap[XContentTypeHeader], totalScore, maxScore)
+	totalScore, maxScore = GetHTTPVersionScore(response.Proto, totalScore, maxScore)
+	totalScore, maxScore = GetTLSVersionScore(response.TLS, totalScore, maxScore)
+	serverInfo = getServerInformation(responseHeaderMap[Server])
 	return
 }
 
 // GetXSSScore returns the XSS Score of the URL
-func GetXSSScore(XSSValue string) (score int, XSSReportURL string) {
-	XSSValue = strings.TrimSpace(XSSValue)
-	if strings.Compare(XSSValue, XSSValues[0]) == 0 {
-		score = 0
-	} else if strings.HasPrefix(XSSValue, XSSValues[1]) {
-		score = 5
+func GetXSSScore(XSSValue string, totalScore int, maxScore int) (int, int, string) {
+	var XSSReportURL string
+	maxScore += 5
+	if XSSValue != "" {
+		XSSValue = strings.TrimSpace(XSSValue)
+		if XSSValue == XSSValues[0] {
+			totalScore += 0
+		} else if strings.HasPrefix(XSSValue, XSSValues[1]) {
+			totalScore += 5
+		}
+		XSSValueReport := strings.Split(XSSValue, "report=")
+		if len(XSSValueReport) == 2 {
+			XSSReportURL = XSSValueReport[1]
+		}
 	}
-	XSSValueReport := strings.Split(XSSValue, "report=")
-	if len(XSSValueReport) == 2 {
-		XSSReportURL = XSSValueReport[1]
-	}
-	return
+
+	return totalScore, maxScore, XSSReportURL
 }
 
 // GetXFrameScore returns the HTTP X-Frame-Options Response Header Score of the URL
-func GetXFrameScore(XFrameValue string) (score int) {
-	XFrameValue = strings.TrimSpace(strings.ToLower(XFrameValue))
-	if strings.Compare(XFrameValue, XFrameValues[0]) == 0 || strings.Compare(XFrameValue, XFrameValues[1]) == 0 {
-		score = 5
-	} else if strings.HasPrefix(XFrameValue, XFrameValues[2]) {
-		score = 4
+func GetXFrameScore(XFrameValue string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if XFrameValue != "" {
+		XFrameValue = strings.TrimSpace(strings.ToLower(XFrameValue))
+		if XFrameValue == XFrameValues[0] || XFrameValue == XFrameValues[1] {
+			totalScore += 5
+		} else if strings.HasPrefix(XFrameValue, XFrameValues[2]) {
+			totalScore += 4
+		}
+	} else {
+		totalScore++
 	}
-	return
+	return totalScore, maxScore
 }
 
 // GetHSTSScore returns the HTTP Strict-Transport-Security Response Header Score of the URL
-func GetHSTSScore(HSTS string) (score int) {
-	if strings.HasPrefix(HSTS, HSTSValues[0]) {
-		score = 4
-		if strings.Contains(HSTS, HSTSValues[1]) || strings.Contains(HSTS, HSTSValues[2]) {
-			score = 5
+func GetHSTSScore(HSTS string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if HSTS != "" {
+		if strings.HasPrefix(HSTS, HSTSValues[0]) {
+			totalScore += 4
+			if strings.Contains(HSTS, HSTSValues[1]) || strings.Contains(HSTS, HSTSValues[2]) {
+				totalScore++
+			}
 		}
+	} else {
+		totalScore += 2
 	}
-	return
+	return totalScore, maxScore
+}
+
+// GetCSPScore returns the score for Content Security Policy Header
+func GetCSPScore(CSP string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if CSP != "" {
+		totalScore += 5
+	} else {
+		totalScore += 3
+	}
+	return totalScore, maxScore
+}
+
+// GetPKPScore returns the score for Public Key Pinning Header
+func GetPKPScore(PKP string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if PKP != "" {
+		totalScore += 5
+	} else {
+		totalScore += 3
+	}
+	return totalScore, maxScore
 }
 
 // GetReferrerPolicyScore returns the HTTP Referrer-Policy Response Header Score of the URL
-func GetReferrerPolicyScore(ReferrerPolicy string) (score int) {
-	ReferrerPolicy = strings.TrimSpace(strings.ToLower(ReferrerPolicy))
-	if strings.Compare(ReferrerPolicy, ReferrerPolicyValues[0]) == 0 {
-		score = 5
-	} else if strings.Compare(ReferrerPolicy, ReferrerPolicyValues[1]) == 0 || strings.Compare(ReferrerPolicy, ReferrerPolicyValues[2]) == 0 || strings.Compare(ReferrerPolicy, ReferrerPolicyValues[3]) == 0 || strings.Compare(ReferrerPolicy, ReferrerPolicyValues[4]) == 0 || strings.Compare(ReferrerPolicy, ReferrerPolicyValues[5]) == 0 || strings.Compare(ReferrerPolicy, ReferrerPolicyValues[6]) == 0 {
-		score = 4
-	} else if strings.Compare(ReferrerPolicy, ReferrerPolicyValues[7]) == 0 {
-		score = 2
+func GetReferrerPolicyScore(ReferrerPolicy string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if ReferrerPolicy != "" {
+		ReferrerPolicy = strings.TrimSpace(strings.ToLower(ReferrerPolicy))
+		if ReferrerPolicy == ReferrerPolicyValues[0] {
+			totalScore += 5
+		} else if ReferrerPolicy == ReferrerPolicyValues[1] || ReferrerPolicy == ReferrerPolicyValues[2] || ReferrerPolicy == ReferrerPolicyValues[3] || ReferrerPolicy == ReferrerPolicyValues[4] || ReferrerPolicy == ReferrerPolicyValues[5] || ReferrerPolicy == ReferrerPolicyValues[6] {
+			totalScore += 4
+		} else if ReferrerPolicy == ReferrerPolicyValues[7] {
+			totalScore += 2
+		}
+
 	}
-	return
+	return totalScore, maxScore
 }
 
 // GetXContentTypeScore returns the score for X-Content-Type-Options Header
-func GetXContentTypeScore(XContentType string) (score int) {
-	score = 0
-	if strings.EqualFold(XContentType, XContentTypeHeaderValue) {
-		score = 5
+func GetXContentTypeScore(XContentType string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if XContentType == XContentTypeHeaderValue {
+		totalScore += 5
 	}
-	return
+	return totalScore, maxScore
 }
 
 // GetHTTPVersionScore returns the score for HTTP Version
-func GetHTTPVersionScore(Proto string) (score int) {
-	score = 0
-	if strings.EqualFold(Proto, HTTPVersion[0]) {
-		score = 5
-	} else if strings.EqualFold(Proto, HTTPVersion[1]) {
-		score = 2
+func GetHTTPVersionScore(Proto string, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if Proto == HTTPVersion[0] {
+		totalScore += 5
+	} else if Proto == HTTPVersion[1] {
+		totalScore += 2
 	}
-	return
+	return totalScore, maxScore
 }
 
 // GetTLSVersionScore returns the score for TLS Version
-func GetTLSVersionScore(Version uint16) (score int) {
-	score = 0
-	if Version == tls.VersionTLS12 {
-		score = 5
-	} else if Version == tls.VersionTLS11 {
-		score = 3
-	} else if Version == tls.VersionTLS10 {
-		score = 1
+func GetTLSVersionScore(TLS *tls.ConnectionState, totalScore int, maxScore int) (int, int) {
+	maxScore += 5
+	if TLS != nil {
+		if TLS.Version == tls.VersionTLS12 {
+			totalScore += 5
+		} else if TLS.Version == tls.VersionTLS11 {
+			totalScore += 3
+		} else if TLS.Version == tls.VersionTLS10 {
+			totalScore++
+		}
 	}
-	return
+	return totalScore, maxScore
 }
 
 // GetMailServerConfigurationScore returns the Mail Server Configuration Score of a Domain
@@ -428,6 +362,9 @@ func GetPreviousVulnerabilitiesScore(host string) (totalScore int, maxScore int,
 }
 
 func getServerInformation(server string) (serverInfo *models.ServerDetail) {
+	if server == "" {
+		return
+	}
 	jsonFile, err := os.Open("resources/web_servers.json")
 	if err != nil {
 		log.Fatal("Error Occured while opening JSON File ", err)
