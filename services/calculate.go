@@ -202,14 +202,9 @@ func GetReferrerPolicyScore(ReferrerPolicy string, totalScore int, maxScore int)
 	maxScore += 5
 	if ReferrerPolicy != "" {
 		ReferrerPolicy = strings.TrimSpace(strings.ToLower(ReferrerPolicy))
-		if ReferrerPolicy == ReferrerPolicyValues[0] {
-			totalScore += 5
-		} else if ReferrerPolicy == ReferrerPolicyValues[1] || ReferrerPolicy == ReferrerPolicyValues[2] || ReferrerPolicy == ReferrerPolicyValues[3] || ReferrerPolicy == ReferrerPolicyValues[4] || ReferrerPolicy == ReferrerPolicyValues[5] || ReferrerPolicy == ReferrerPolicyValues[6] {
-			totalScore += 4
-		} else if ReferrerPolicy == ReferrerPolicyValues[7] {
-			totalScore += 2
+		if score, ok := ReferrerPolicyValues[ReferrerPolicy]; ok {
+			totalScore += score
 		}
-
 	}
 	return totalScore, maxScore
 }

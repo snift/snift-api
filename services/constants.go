@@ -46,7 +46,16 @@ var XFrameValues = [...]string{"deny", "sameorigin", "allow-from"}
 var HSTSValues = [...]string{"max-age", "includeSubDomains", "preload"}
 
 // ReferrerPolicyValues used to store the Referrer-Policy Header values
-var ReferrerPolicyValues = [...]string{"no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"}
+var ReferrerPolicyValues = map[string]int{
+	"no-referrer":                     5,
+	"no-referrer-when-downgrade":      4,
+	"origin":                          4,
+	"origin-when-cross-origin":        4,
+	"same-origin":                     4,
+	"strict-origin":                   4,
+	"strict-origin-when-cross-origin": 4,
+	"unsafe-url":                      2,
+}
 
 // XContentTypeHeaderValue is used to store the value for X-Content-Type Options Header
 const XContentTypeHeaderValue = "nosniff"
