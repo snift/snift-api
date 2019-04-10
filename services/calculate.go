@@ -54,6 +54,7 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	var port string
 	domain, err := url.Parse(scoresURL)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	protocol := domain.Scheme
@@ -71,6 +72,7 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	var maximumScore = 5
 	headerScore, _, maxScore, ServerDetail, err := GetResponseHeaderScore(scoresURL)
 	if err != nil {
+		fmt.Println("hello", err)
 		return nil, err
 	}
 	maximumScore = maximumScore + maxScore
@@ -98,9 +100,14 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 		return 0, "", 0, nil, err
 	}
 	var responseHeaderMap map[string]string
-	// Sending Head Request to URL
-	response, err := http.Head(url)
+	// Initializing client to avoid Redirects
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}}
+	response, err := client.Head(url)
 	if err != nil {
+		fmt.Println(err)
 		return 0, "", 0, nil, err
 	}
 	responseHeaderMap = make(map[string]string)
