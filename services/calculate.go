@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	models "snift-backend/models"
+	"snift-backend/models"
 	"snift-backend/utils"
 	"strconv"
 	"strings"
