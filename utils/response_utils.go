@@ -36,6 +36,17 @@ func InternalServerError(w http.ResponseWriter, isJSON bool, err string) {
 	fmt.Fprintf(w, `{"error":%q}`, err)
 }
 
+// Unauthorized returns error JSON for Unauthorized Error
+func Unauthorized(w http.ResponseWriter, isJSON bool, err string) {
+	if !isJSON {
+		http.Error(w, err, http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	fmt.Fprintf(w, `{"error":%q}`, err)
+}
+
 // IsValidURL tests a string to determine if it is a url or not.
 func IsValidURL(rawURL string) error {
 	_, err := url.ParseRequestURI(rawURL)

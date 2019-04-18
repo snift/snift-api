@@ -7,6 +7,11 @@ type Scores struct {
 	Messages []string `json:"messages"`
 }
 
+// ScoresRequest holds the structure for Scores API Request Body
+type ScoresRequest struct {
+	URL string `json:"url"`
+}
+
 // GetScores returns a valid Score instance
 func GetScores(url string, score float64, messages []string) *Scores {
 	response := &Scores{
