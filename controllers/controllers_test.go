@@ -44,7 +44,10 @@ func TestInvalidURL(t *testing.T) {
 	assert.Equal(t, tokenrr.Code, http.StatusOK)
 
 	var token models.Token
-	json.NewDecoder(tokenrr.Body).Decode(&token)
+	parseerr := json.NewDecoder(tokenrr.Body).Decode(&token)
+	if parseerr != nil {
+		assert.Fail(t, "Error Occured while Decoding")
+	}
 
 	var urlJSON = `{"url":"example"}`
 
@@ -69,7 +72,10 @@ func TestValidURL(t *testing.T) {
 	assert.Equal(t, tokenrr.Code, http.StatusOK)
 
 	var token models.Token
-	json.NewDecoder(tokenrr.Body).Decode(&token)
+	parseerr := json.NewDecoder(tokenrr.Body).Decode(&token)
+	if parseerr != nil {
+		assert.Fail(t, "Error Occured while Decoding")
+	}
 
 	var urlJSON = `{"url":"https://www.example.com"}`
 
