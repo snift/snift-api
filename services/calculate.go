@@ -21,17 +21,13 @@ import (
 	"time"
 )
 
+var badges []*models.Badge
+
 // CalculateProtocolScore returns a score based on whether the protocol is http/https
-func CalculateProtocolScore(protocol string) (score int, message string) {
-	score = -1
-	if protocol == "http" {
-		score = 0
-		message = "Website is unencrypted and hence subjective to Man-in-the-Middle attacks(MITM) and Eavesdropping Attacks."
-	} else if protocol == "https" {
+func CalculateProtocolScore(protocol string) (score int) {
+	if protocol == "https" {
 		score = 5
-		message = "From the protocol level, Website is secure."
-	} else {
-		message = "Protocol Not Found"
+		badges = append(badges, utils.GetHTTPSBadge())
 	}
 	return
 }
@@ -47,11 +43,14 @@ var getDefaultPort = func(protocol string) string {
 }
 
 // CalculateOverallScore returns the overall score for the incoming request
-func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
-	var messages []string
+func CalculateOverallScore(scoresURL string) ([]byte, error) {
 	var score int
 	var host string
 	var port string
+	dbresponse := utils.FindEntry(scoresURL)
+	if dbresponse != "" {
+		return []byte(dbresponse), nil
+	}
 	domain, err := url.Parse(scoresURL)
 	if err != nil {
 		fmt.Println(err)
@@ -66,38 +65,49 @@ func CalculateOverallScore(scoresURL string) (*models.ScoreResponse, error) {
 	if port == "" {
 		port = getDefaultPort(protocol)
 	}
-	protocolScore, protocolMessage := CalculateProtocolScore(protocol)
-	messages = append(messages, protocolMessage)
+	protocolScore := CalculateProtocolScore(protocol)
 	score = score + protocolScore
 	var maximumScore = 5
-	headerScore, _, maxScore, ServerDetail, err := GetResponseHeaderScore(scoresURL)
+	headerScore, _, maxScore, ServerDetail, ServerData, err := GetResponseHeaderScore(scoresURL)
 	if err != nil {
-		fmt.Println("hello", err)
 		return nil, err
 	}
 	maximumScore = maximumScore + maxScore
 	score = score + headerScore
-	mailServerScore, maxScore := GetMailServerConfigurationScore(host)
+	mailServerScore, maxScore, txtRecords, dmarcRecords := GetMailServerConfigurationScore(host)
 	score += mailServerScore
 	maximumScore += maxScore
 	totalScore := math.Ceil((float64(float64(score)/float64(maximumScore)))*100) / 100
-	fmt.Println("Protocol Score is " + strconv.Itoa(protocolScore))
-	fmt.Println("Message: " + protocolMessage)
 	fmt.Println("Final Score for: " + scoresURL + " is " + strconv.Itoa(score) + " out of " + strconv.Itoa(maximumScore))
 	certificates, certError := models.GetCertificate(host, port, protocol)
 	if certError != nil {
 		return nil, certError
 	}
-	scores := models.GetScores(scoresURL, totalScore, messages)
+	scores := models.GetScores(scoresURL, totalScore, badges)
 	response := models.GetScoresResponse(scores, certificates, nil, ServerDetail)
-	return response, nil
+	responseBody, err := json.Marshal(response)
+	serverdataJSON, serverdataJSONerr := json.Marshal(ServerData)
+	if serverdataJSONerr != nil {
+		fmt.Println("Error Occured while parsing Server Data JSON", serverdataJSONerr)
+	}
+	entry := &models.Domain{
+		Name:         scoresURL,
+		ServerData:   string(serverdataJSON),
+		TxtRecords:   txtRecords,
+		DmarcRecords: dmarcRecords,
+		Response:     string(responseBody),
+		IncidentList: "",
+		Score:        totalScore,
+	}
+	utils.CreateEntry(entry)
+	return responseBody, err
 }
 
 // GetResponseHeaderScore returns the Response Header Score for the HTTP Request
-func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, maxScore int, serverInfo *models.ServerDetail, err error) {
+func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, maxScore int, serverInfo *models.ServerDetail, serverData map[string]string, err error) {
 	err = utils.IsValidURL(url)
 	if err != nil {
-		return 0, "", 0, nil, err
+		return 0, "", 0, nil, nil, err
 	}
 	var responseHeaderMap map[string]string
 	// Initializing client to avoid Redirects
@@ -108,7 +118,7 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 	response, err := client.Head(url)
 	if err != nil {
 		fmt.Println(err)
-		return 0, "", 0, nil, err
+		return 0, "", 0, nil, nil, err
 	}
 	responseHeaderMap = make(map[string]string)
 	// Constructing Response Header Map
@@ -127,6 +137,7 @@ func GetResponseHeaderScore(url string) (totalScore int, XSSReportURL string, ma
 	totalScore, maxScore = GetHTTPVersionScore(response.Proto, totalScore, maxScore)
 	totalScore, maxScore = GetTLSVersionScore(response.TLS, totalScore, maxScore)
 	serverInfo = getServerInformation(responseHeaderMap[Server])
+	serverData = responseHeaderMap
 	return
 }
 
@@ -139,6 +150,7 @@ func GetXSSScore(XSSValue string, totalScore int, maxScore int) (int, int, strin
 		if XSSValue == XSSValues[0] {
 			totalScore += 0
 		} else if strings.HasPrefix(XSSValue, XSSValues[1]) {
+			badges = append(badges, utils.GetXSSBadge())
 			totalScore += 5
 		}
 		XSSValueReport := strings.Split(XSSValue, "report=")
@@ -156,6 +168,7 @@ func GetXFrameScore(XFrameValue string, totalScore int, maxScore int) (int, int)
 	if XFrameValue != "" {
 		XFrameValue = strings.TrimSpace(strings.ToLower(XFrameValue))
 		if XFrameValue == XFrameValues[0] || XFrameValue == XFrameValues[1] {
+			badges = append(badges, utils.GetXFrameBadge())
 			totalScore += 5
 		} else if strings.HasPrefix(XFrameValue, XFrameValues[2]) {
 			totalScore += 4
@@ -173,6 +186,7 @@ func GetHSTSScore(HSTS string, totalScore int, maxScore int) (int, int) {
 		if strings.HasPrefix(HSTS, HSTSValues[0]) {
 			totalScore += 4
 			if strings.Contains(HSTS, HSTSValues[1]) || strings.Contains(HSTS, HSTSValues[2]) {
+				badges = append(badges, utils.GetHSTSBadge())
 				totalScore++
 			}
 		}
@@ -186,6 +200,7 @@ func GetHSTSScore(HSTS string, totalScore int, maxScore int) (int, int) {
 func GetCSPScore(CSP string, totalScore int, maxScore int) (int, int) {
 	maxScore += 5
 	if CSP != "" {
+		badges = append(badges, utils.GetCSPBadge())
 		totalScore += 5
 	} else {
 		totalScore += 3
@@ -197,6 +212,7 @@ func GetCSPScore(CSP string, totalScore int, maxScore int) (int, int) {
 func GetPKPScore(PKP string, totalScore int, maxScore int) (int, int) {
 	maxScore += 5
 	if PKP != "" {
+		badges = append(badges, utils.GetHPKPBadge())
 		totalScore += 5
 	} else {
 		totalScore += 3
@@ -211,6 +227,9 @@ func GetReferrerPolicyScore(ReferrerPolicy string, totalScore int, maxScore int)
 		ReferrerPolicy = strings.TrimSpace(strings.ToLower(ReferrerPolicy))
 		if score, ok := ReferrerPolicyValues[ReferrerPolicy]; ok {
 			totalScore += score
+			if score >= 4 {
+				badges = append(badges, utils.GetRPBadge())
+			}
 		}
 	}
 	return totalScore, maxScore
@@ -220,6 +239,7 @@ func GetReferrerPolicyScore(ReferrerPolicy string, totalScore int, maxScore int)
 func GetXContentTypeScore(XContentType string, totalScore int, maxScore int) (int, int) {
 	maxScore += 5
 	if XContentType == XContentTypeHeaderValue {
+		badges = append(badges, utils.GetXContentTypeBadge())
 		totalScore += 5
 	}
 	return totalScore, maxScore
@@ -229,6 +249,7 @@ func GetXContentTypeScore(XContentType string, totalScore int, maxScore int) (in
 func GetHTTPVersionScore(Proto string, totalScore int, maxScore int) (int, int) {
 	maxScore += 5
 	if Proto == HTTPVersion[0] {
+		badges = append(badges, utils.GetHTTPVersionBadge())
 		totalScore += 5
 	} else if Proto == HTTPVersion[1] {
 		totalScore += 2
@@ -241,6 +262,7 @@ func GetTLSVersionScore(TLS *tls.ConnectionState, totalScore int, maxScore int) 
 	maxScore += 5
 	if TLS != nil {
 		if TLS.Version == tls.VersionTLS12 {
+			badges = append(badges, utils.GetTLSVersionBadge())
 			totalScore += 5
 		} else if TLS.Version == tls.VersionTLS11 {
 			totalScore += 3
@@ -252,25 +274,26 @@ func GetTLSVersionScore(TLS *tls.ConnectionState, totalScore int, maxScore int) 
 }
 
 // GetMailServerConfigurationScore returns the Mail Server Configuration Score of a Domain
-func GetMailServerConfigurationScore(host string) (totalScore int, maximumScore int) {
+func GetMailServerConfigurationScore(host string) (totalScore int, maximumScore int, txtRecords string, dmarcRecord string) {
 	maximumScore = 0
 	totalScore = 0
 	if strings.HasPrefix(host, "www.") {
 		host = strings.Replace(host, "www.", "", -1)
 	}
-	spfScore, maxScore := GetSPFScore(host)
+	spfScore, maxScore, txtRecords := GetSPFScore(host)
 	maximumScore = maximumScore + maxScore
 	totalScore = totalScore + spfScore
-	totalScore += GetDMARCScore(host)
+	dmarcScore, dmarcRecord := GetDMARCScore(host)
+	totalScore += dmarcScore
 	maximumScore += 5
 	return
 }
 
 // GetSPFScore returns the Sender Policy Framework Score of the Domain
-func GetSPFScore(domain string) (totalScore int, maxScore int) {
+func GetSPFScore(domain string) (totalScore int, maxScore int, txtRecords string) {
 	command := strings.Replace(TXTQuery, "domain.com", domain, -1)
 	out, err := exec.Command("bash", "-c", command).Output()
-	txtRecords := string(out[:])
+	txtRecords = string(out[:])
 
 	if err != nil {
 		fmt.Println("Unexpected Error Occured while extracting TXT Records", err)
@@ -303,14 +326,17 @@ func GetSPFScore(domain string) (totalScore int, maxScore int) {
 		}
 	}
 	maxScore = spfRecordCount * 5
+	if totalScore == maxScore {
+		badges = append(badges, utils.GetSPFBadge())
+	}
 	return
 }
 
 // GetDMARCScore returns the DMARC Score of the Domain
-func GetDMARCScore(domain string) (score int) {
+func GetDMARCScore(domain string) (score int, dmarcRecord string) {
 	command := strings.Replace(DMARCQuery, "domain.com", domain, -1)
 	out, err := exec.Command("bash", "-c", command).Output()
-	dmarcRecord := string(out[:])
+	dmarcRecord = string(out[:])
 
 	score = 0
 

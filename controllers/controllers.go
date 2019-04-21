@@ -9,6 +9,7 @@ import (
 	"snift-backend/models"
 	"snift-backend/services"
 	"snift-backend/utils"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -52,16 +53,19 @@ func GetScore(w http.ResponseWriter, r *http.Request) {
 		utils.BadRequest(w, true, "Invalid URL")
 		return
 	}
-	response, _ := services.CalculateOverallScore(scoresRequest.URL)
-	body, jsonError := json.Marshal(response)
-	if jsonError != nil {
+	response, scoresError := services.CalculateOverallScore(scoresRequest.URL)
+	if scoresError != nil {
+		if strings.Contains(scoresError.Error(), "no such host") {
+			utils.BadRequest(w, true, "Invalid Domain")
+			return
+		}
 		utils.InternalServerError(w, true, "Unexpected Error Occured")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	fmt.Printf("Score for %s obtained in %v seconds \n", scoresRequest.URL, time.Since(start).Seconds())
-	utils.Writer(w.Write(body))
+	utils.Writer(w.Write(response))
 }
 
 // GetAuthToken - GET /scores handler
