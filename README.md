@@ -1,6 +1,6 @@
 # snift-backend
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f29310833d864614a206973c4ded009a)](https://app.codacy.com/app/maruthi12/snift-backend?utm_source=github.com&utm_medium=referral&utm_content=maruthi-adithya/snift-backend&utm_campaign=Badge_Grade_Settings)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/070f2a0eb4bd458ba4459bc6c381abf4)](https://www.codacy.com/app/snift/snift-api?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=snift/snift-api&amp;utm_campaign=Badge_Grade)
 [![Build Status](https://travis-ci.com/maruthi-adithya/snift-backend.svg?branch=master)](https://travis-ci.com/maruthi-adithya/snift-backend)
 
 🏗 Backend REST API for Snift to sniff security vulnerabilities from the web.
@@ -9,4 +9,4 @@
 
 ### Installation
 
-- Follow the instructions from [Setup.md](./SETUP.md) to setup a working dev environment.
+-   Follow the instructions from [Setup.md](./SETUP.md) to setup a working dev environment.
