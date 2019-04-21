@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"snift-backend/models"
+	"snift-api/models"
 )
 
 // CreateBadge creates a Badge struct with given properties

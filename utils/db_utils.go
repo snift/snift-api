@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
-	"snift-backend/models"
+	"snift-api/models"
 
 	"github.com/jinzhu/gorm"
 	// Import for Postgres

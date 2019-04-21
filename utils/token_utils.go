@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"snift-backend/models"
+	"snift-api/models"
 	"strings"
 	"time"
 
