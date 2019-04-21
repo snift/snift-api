@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"snift-backend/models"
+	"snift-api/models"
 	"strings"
 	"testing"
 

@@ -54,4 +54,4 @@ export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
 ## Troubleshooting
 
-View the [Troubleshooting Docs](Troubleshooting.md) for any errors during usage or file an issue [here](https://github.com/maruthi-adithya/snift-backend/issues) if you think something is wrong.
+View the [Troubleshooting Docs](Troubleshooting.md) for any errors during usage or file an issue [here](https://github.com/maruthi-adithya/snift-api/issues) if you think something is wrong.
