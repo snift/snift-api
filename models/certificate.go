@@ -12,14 +12,15 @@ var TimeoutSeconds = 3
 
 //Cert holds the certificate details
 type Cert struct {
-	DomainName string   `json:"domain_name"`
-	IP         string   `json:"ip_address"`
-	Issuer     string   `json:"issuer"`
-	CommonName string   `json:"common_name"`
-	SANs       []string `json:"sans"`
-	NotBefore  string   `json:"not_before"`
-	NotAfter   string   `json:"not_after"`
-	certChain  []*x509.Certificate
+	DomainName         string   `json:"domain_name"`
+	IP                 string   `json:"ip_address"`
+	Issuer             string   `json:"issuer"`
+	IssuerOrganization []string `json:"issuer_organization"`
+	CertificateURL     []string `json:"certificate_url"`
+	CommonName         string   `json:"common_name"`
+	SANs               []string `json:"sans"`
+	NotBefore          string   `json:"not_before"`
+	NotAfter           string   `json:"not_after"`
 }
 
 var serverCert = func(host string, port string) ([]*x509.Certificate, string, error) {
@@ -57,13 +58,14 @@ func GetCertificate(host string, port string, protocol string) (*Cert, error) {
 	var loc = time.UTC // Setting UTC as Standard Time
 
 	return &Cert{
-		DomainName: host,
-		IP:         ip,
-		Issuer:     cert.Issuer.CommonName,
-		CommonName: cert.Subject.CommonName,
-		SANs:       cert.DNSNames, // Subject Alternative Name
-		NotBefore:  cert.NotBefore.In(loc).String(),
-		NotAfter:   cert.NotAfter.In(loc).String(),
-		certChain:  certChain,
+		DomainName:         host,
+		IP:                 ip,
+		Issuer:             cert.Issuer.CommonName,
+		IssuerOrganization: cert.Issuer.Organization,
+		CommonName:         cert.Subject.CommonName,
+		CertificateURL:     cert.IssuingCertificateURL,
+		SANs:               cert.DNSNames, // Subject Alternative Name
+		NotBefore:          cert.NotBefore.In(loc).String(),
+		NotAfter:           cert.NotAfter.In(loc).String(),
 	}, nil
 }

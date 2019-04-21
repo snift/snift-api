@@ -19,12 +19,10 @@ func init() {
 }
 
 func TestCalculateProtocolScore(t *testing.T) {
-	score, message := CalculateProtocolScore("http")
+	score := CalculateProtocolScore("http")
 	assert.Equal(t, score, 0)
-	assert.Equal(t, message, "Website is unencrypted and hence subjective to Man-in-the-Middle attacks(MITM) and Eavesdropping Attacks.")
-	score, message = CalculateProtocolScore("https")
+	score = CalculateProtocolScore("https")
 	assert.Equal(t, score, 5)
-	assert.Equal(t, message, "From the protocol level, Website is secure.")
 }
 
 func TestGetDefaultPort(t *testing.T) {
@@ -174,15 +172,17 @@ func TestGetHTTPVersionScore(t *testing.T) {
 }
 
 func TestGetDMARCScore(t *testing.T) {
-	assert.Equal(t, GetDMARCScore("google.com"), 5)
-	assert.Equal(t, GetDMARCScore("www.google.com"), 0)
+	score, _ := GetDMARCScore("google.com")
+	assert.Equal(t, score, 5)
+	score, _ = GetDMARCScore("www.google.com")
+	assert.Equal(t, score, 0)
 }
 
 func TestGetMailServerConfigurationScore(t *testing.T) {
-	score, maxScore := GetMailServerConfigurationScore("google.com")
+	score, maxScore, _, _ := GetMailServerConfigurationScore("google.com")
 	assert.Equal(t, score, 8)
 	assert.Equal(t, maxScore, 10)
-	score, maxScore = GetMailServerConfigurationScore("www.google.com")
+	score, maxScore, _, _ = GetMailServerConfigurationScore("www.google.com")
 	assert.Equal(t, score, 8)
 	assert.Equal(t, maxScore, 10)
 }
