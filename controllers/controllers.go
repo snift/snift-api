@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"snift-backend/models"
-	"snift-backend/services"
-	"snift-backend/utils"
+	"snift-api/models"
+	"snift-api/services"
+	"snift-api/utils"
 	"time"
 
 	"github.com/gorilla/mux"

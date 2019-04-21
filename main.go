@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"snift-backend/controllers"
+	"snift-api/controllers"
 
 	"github.com/joho/godotenv"
 )
