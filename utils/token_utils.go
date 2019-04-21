@@ -13,11 +13,13 @@ import (
 
 // GetToken creates a JWT Token and returns it
 func GetToken(r *http.Request) (response *models.Token, err error) {
-	expiryTime := time.Now().Add(time.Hour * 24).Unix()
+	// golang unix timestamp returns number of seconds since epoch, instead of ms
+	expiryTimeInSeconds := time.Now().Add(time.Hour * 24).UnixNano()
+	expiryTimeInMs := expiryTimeInSeconds / 1000000
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"ip":  r.RemoteAddr,
 		"ua":  r.Header.Get("User-Agent"),
-		"exp": expiryTime,
+		"exp": expiryTimeInMs,
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
@@ -25,7 +27,7 @@ func GetToken(r *http.Request) (response *models.Token, err error) {
 
 	response = &models.Token{
 		Token:      tokenString,
-		ExpiryTime: expiryTime,
+		ExpiryTime: expiryTimeInMs,
 	}
 	return
 }
