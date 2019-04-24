@@ -47,6 +47,7 @@ func CalculateOverallScore(scoresURL string) ([]byte, error) {
 	var score int
 	var host string
 	var port string
+	badges = nil
 	dbresponse := utils.FindEntry(scoresURL)
 	if dbresponse != "" {
 		return []byte(dbresponse), nil
