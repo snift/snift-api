@@ -4,7 +4,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// Domain has domain details that is stored in the database
+// Domain holds the data related a domain
 type Domain struct {
 	gorm.Model
 	Name         string `gorm:"size:255;unique"`
