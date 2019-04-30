@@ -63,5 +63,6 @@ func FindEntry(url string) (response string) {
 	}
 	db.Where("name = ?", url).First(&domain)
 	response = domain.Response
+	defer db.Close()
 	return
 }
