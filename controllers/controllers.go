@@ -39,7 +39,7 @@ func GetScore(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
 		w.Header().Set("Access-Control-Allow-Origin", utils.GetAccessControlAllowOrigin())
-		w.Header().Set("Access-Control-Allow-Headers", "x-auth-token,content-type")
+		w.Header().Set("Access-Control-Allow-Headers", "x-auth-token,content-type,X-Auth-Token,Content-Type")
 		return
 	}
 	if !utils.ValidateToken(r) {
