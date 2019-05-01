@@ -102,7 +102,7 @@ func TestUnauthenticatedRequest(t *testing.T) {
 	assert.Equal(t, rr.Body.String(), "{\"error\":\"Invalid Token\"}")
 }
 
-func TestPreflifghtRequest(t *testing.T) {
+func TestPreflightRequest(t *testing.T) {
 	req, _ := http.NewRequest("OPTIONS", "/scores", nil)
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(GetScore)
