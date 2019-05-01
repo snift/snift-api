@@ -22,7 +22,7 @@ func HandleRequests() {
 	log.Print("Server starting at PORT ", port)
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", HomePage).Methods("GET")
-	myRouter.HandleFunc("/scores", GetScore).Methods("POST")
+	myRouter.HandleFunc("/scores", GetScore).Methods("POST", "OPTIONS")
 	myRouter.HandleFunc("/token", GetAuthToken).Methods("GET")
 	log.Fatal(http.ListenAndServe(port, myRouter))
 }
@@ -35,6 +35,13 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 
 // GetScore - POST /scores handler
 func GetScore(w http.ResponseWriter, r *http.Request) {
+	// Handle the Preflight Request
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		w.Header().Set("Access-Control-Allow-Origin", utils.GetAccessControlAllowOrigin())
+		w.Header().Set("Access-Control-Allow-Headers", "x-auth-token,content-type,X-Auth-Token,Content-Type")
+		return
+	}
 	if !utils.ValidateToken(r) {
 		utils.Unauthorized(w, true, "Invalid Token")
 		return
@@ -64,6 +71,7 @@ func GetScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", utils.GetAccessControlAllowOrigin())
 	w.WriteHeader(http.StatusOK)
 	fmt.Printf("Score for %s obtained in %v seconds \n", scoresRequest.URL, time.Since(start).Seconds())
 	utils.Writer(w.Write(response))
@@ -82,6 +90,7 @@ func GetAuthToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", utils.GetAccessControlAllowOrigin())
 	w.WriteHeader(http.StatusOK)
 	utils.Writer(w.Write([]byte(responseBody)))
 }

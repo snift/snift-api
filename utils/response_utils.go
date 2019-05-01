@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 // Writer checks and validates the response
@@ -51,4 +52,9 @@ func Unauthorized(w http.ResponseWriter, isJSON bool, err string) {
 func IsValidURL(rawURL string) error {
 	_, err := url.ParseRequestURI(rawURL)
 	return err
+}
+
+// GetAccessControlAllowOrigin returns the value of Access-Control-Allow-Origin Header
+func GetAccessControlAllowOrigin() string {
+	return os.Getenv("ACCESS-CONTROL-ALLOW-ORIGIN")
 }

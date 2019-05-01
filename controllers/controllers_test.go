@@ -8,6 +8,7 @@ import (
 	"path"
 	"runtime"
 	"snift-api/models"
+	"snift-api/utils"
 	"strings"
 	"testing"
 
@@ -99,4 +100,16 @@ func TestUnauthenticatedRequest(t *testing.T) {
 
 	assert.Equal(t, rr.Code, http.StatusUnauthorized)
 	assert.Equal(t, rr.Body.String(), "{\"error\":\"Invalid Token\"}")
+}
+
+func TestPreflightRequest(t *testing.T) {
+	req, _ := http.NewRequest("OPTIONS", "/scores", nil)
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(GetScore)
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, rr.Code, http.StatusOK)
+	assert.Equal(t, rr.Header().Get("Access-Control-Allow-Methods"), "POST")
+	assert.Equal(t, rr.Header().Get("Access-Control-Allow-Origin"), utils.GetAccessControlAllowOrigin())
+	assert.Equal(t, rr.Header().Get("Access-Control-Allow-Headers"), "x-auth-token,content-type,X-Auth-Token,Content-Type")
 }
