@@ -342,7 +342,7 @@ func GetDMARCScore(domain string) (score int, dmarcRecord string) {
 	score = 0
 
 	if err != nil {
-		log.Fatal("Unexpected Error Occured while extracting DMARC Records", err)
+		log.Fatal("Unexpected Error Occured while extracting DMARC Records ", err)
 	}
 	if len(dmarcRecord) > 2 {
 		dmarcRecord = strings.TrimSpace(dmarcRecord[1 : len(dmarcRecord)-1])
