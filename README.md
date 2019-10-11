@@ -5,8 +5,6 @@
 
 🏗 Backend REST API for Snift to sniff security vulnerabilities from the web.
 
-## Getting Started
+## Contributing
 
-### Installation
-
--   Follow the instructions from [Setup.md](./SETUP.md) to setup a working dev environment.
+Read our [**Contributing Guide**](./CONTRIBUTING.md) to learn about getting your local environment setup, and how to build and test your changes for snift-api.
