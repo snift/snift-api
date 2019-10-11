@@ -20,3 +20,6 @@ snift-backend
 
 # Temporary files
 tmp/
+
+# Editor files
+.vscode
