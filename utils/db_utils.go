@@ -44,7 +44,7 @@ func getDBURL() string {
 func CreateEntry(domain *models.Domain) {
 	db, err := initConnection()
 	if err != nil {
-		fmt.Println("Error Occured while initializing connection", err)
+		fmt.Println("Oops! Unable to connect to database", err)
 		return
 	}
 	db.AutoMigrate(&models.Domain{})
@@ -58,7 +58,7 @@ func FindEntry(url string) (response string) {
 	var domain models.Domain
 	db, err := initConnection()
 	if err != nil {
-		fmt.Println("Error Occured while initializing connection", err)
+		fmt.Println("Oops! Unable to connect to database", err)
 		return
 	}
 	db.Where("name = ?", url).First(&domain)
