@@ -56,5 +56,5 @@ func IsValidURL(rawURL string) error {
 
 // GetAccessControlAllowOrigin returns the value of Access-Control-Allow-Origin Header
 func GetAccessControlAllowOrigin() string {
-	return os.Getenv("ACCESS-CONTROL-ALLOW-ORIGIN")
+	return os.Getenv("ACCESS_CONTROL_ALLOW_ORIGIN")
 }
