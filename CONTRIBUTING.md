@@ -8,7 +8,7 @@
 
 ## Code of Conduct
 
-We have a code of conduct you can find [here](./CODE_OF_CONDUCT.md) and every
+We have a code of conduct you can find [here](./CODE-OF-CONDUCT.md) and every
 contributor is expected to obey the rules therein. Any issues or PRs that don't
 abide by the code of conduct may be closed.
 
