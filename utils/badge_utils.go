@@ -20,7 +20,7 @@ func GetHTTPSBadge() *models.Badge {
 
 // GetHSTSBadge returns the HTTP Strict Transport Security Badge
 func GetHSTSBadge() *models.Badge {
-	return createBadge(HSTSBadge, HTTPSBadgeMessage, "NETWORK_PROTECTION")
+	return createBadge(HSTSBadge, HSTSBadgeMessage, "NETWORK_PROTECTION")
 }
 
 // GetHTTPVersionBadge returns the HyperText Transfer Protocol(HTTP) Version Badge
