@@ -29,8 +29,14 @@ To install the project you need to have `go`. Follow the instructions [here](htt
 
 2.  Your environment needs to be running `go v1.11.4`.
 3.  from the root of the project: `go install` to install all dependencies
+4.  Add a new `.env` configuration file to the root of the project with the following contents:
+    ```
+    PORT=:9700
+    ACCESS_CONTROL_ALLOW_ORIGIN=*
+    ```
+    This file is `.gitignored` by default and is a way to configure environment variables that will be used while starting the api server.
 4.  from the root of the project: `go run main.go`
-    - this starts the api server on port `9700` by default
+    - this starts the api server on a system PORT based on the `.env` configuration added in the previous step.
 
 > Tip: Keep your `master` branch pointing at the original repository and make
 > pull requests from branches on your fork. To do this, run:
